@@ -1,0 +1,15 @@
+'use strict';
+(()=>{
+const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+const button=document.createElement('button');button.className='motion-toggle';button.type='button';button.textContent='Pause motion';button.setAttribute('aria-pressed','false');button.setAttribute('aria-label','Pause decorative motion');document.body.append(button);
+let paused=reduced.matches;try{paused=paused||localStorage.getItem('domvybe-motion')==='paused';}catch{}
+function sync(){document.documentElement.classList.toggle('motion-paused',paused);button.textContent=paused?'Enable motion':'Pause motion';button.setAttribute('aria-pressed',String(paused));button.setAttribute('aria-label',paused?'Enable decorative motion':'Pause decorative motion');document.dispatchEvent(new CustomEvent('motion-preference',{detail:paused}));}
+button.addEventListener('click',()=>{paused=!paused;try{localStorage.setItem('domvybe-motion',paused?'paused':'running');}catch{}sync();});reduced.addEventListener('change',e=>{paused=e.matches;sync();});sync();
+const progress=document.createElement('div');progress.className='scroll-progress';progress.setAttribute('aria-hidden','true');document.body.append(progress);
+let scheduled=false;function scroll(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;const max=document.documentElement.scrollHeight-innerHeight;progress.style.transform=`scaleX(${max>0?scrollY/max:0})`;document.querySelector('.site-header')?.classList.toggle('scrolled',scrollY>24);});}addEventListener('scroll',scroll,{passive:true});scroll();
+const reveal=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('arrived');reveal.unobserve(e.target);}}),{threshold:.08});
+document.querySelectorAll('.section-heading,.project-card,.tool-spotlight,.learning-grid,.project-information,.resource-band,.entry-grid>a').forEach((el,i)=>{el.classList.add('motion-reveal');el.style.setProperty('--delay',`${i%3*65}ms`);reveal.observe(el);});
+const fine=matchMedia('(hover:hover) and (pointer:fine)');
+document.querySelectorAll('.card-art,.tool-art,.particle-hero').forEach(el=>{el.addEventListener('pointermove',e=>{if(paused||!fine.matches)return;const r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;el.style.setProperty('--mx',`${x*100}%`);el.style.setProperty('--my',`${y*100}%`);el.style.setProperty('--rx',`${(y-.5)*-5}deg`);el.style.setProperty('--ry',`${(x-.5)*7}deg`);});el.addEventListener('pointerleave',()=>{el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg');});});
+document.addEventListener('click',e=>{const el=e.target.closest('button,.button');if(!el||paused)return;const r=el.getBoundingClientRect(),dot=document.createElement('span');dot.className='click-wave';dot.setAttribute('aria-hidden','true');dot.style.left=`${e.detail?e.clientX-r.left:r.width/2}px`;dot.style.top=`${e.detail?e.clientY-r.top:r.height/2}px`;el.append(dot);dot.addEventListener('animationend',()=>dot.remove(),{once:true});});
+})();
